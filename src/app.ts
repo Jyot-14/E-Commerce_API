@@ -4,6 +4,7 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import productRoutes from './routes/productRoutes';
 import filterRoutes from './routes/filterRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 const app: Express = express();
 
@@ -14,6 +15,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/auth', authRoutes);
 app.use('/product', productRoutes);
 app.use('/filter', filterRoutes);
+app.use('/order', orderRoutes);
 
 app.use('*', (req: Request, res: Response) => {
   return res.status(404).json({

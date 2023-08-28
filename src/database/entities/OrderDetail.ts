@@ -11,7 +11,7 @@ import { Product } from './Product';
 @Entity('order_detail')
 export class OrderDetail {
   @PrimaryGeneratedColumn()
-  order_details_id: number;
+  order_detail_id: number;
 
   @ManyToOne(() => Order, order => order.orderDetails)
   @JoinColumn({ name: 'order_id' })

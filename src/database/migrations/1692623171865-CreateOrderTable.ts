@@ -6,7 +6,7 @@ export class CreateOrderTable1692623171865 implements MigrationInterface {
         CREATE TABLE orders (
             order_id SERIAL PRIMARY KEY,
             user_id INT NOT NULL,
-            order_date TIMESTAMP NOT NULL,
+            order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
             total_amount NUMERIC NOT NULL,
             status VARCHAR(255) NOT NULL,
             address TEXT NOT NULL,
