@@ -3,6 +3,7 @@ import { AppDataSource } from '../database/data-source';
 import { Product } from '../database/entities/Product';
 import { paginate } from '../database/paginator';
 import { Brand } from '../database/entities/Brand';
+import { Category } from '../database/entities/Category';
 
 export const filteredProduct = async (req: Request, res: Response) => {
   try {
@@ -48,9 +49,97 @@ export const filteredProduct = async (req: Request, res: Response) => {
       );
     }
 
+    // Modify the query to include image URLs
+    queryBuilder = queryBuilder
+      .leftJoinAndSelect('product.images', 'product_image')
+      .addSelect(['product_image.image']);
+
     const { records, PaginationInfo } = await paginate(queryBuilder, req);
 
     return res.json({ records, PaginationInfo });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const getFilterOptions = async (_req: Request, res: Response) => {
+  const productRepo = AppDataSource.getRepository(Product);
+  const categoryRepo = AppDataSource.getRepository(Category);
+
+  try {
+    const categories = await categoryRepo.find();
+
+    const filterOptions = {};
+
+    for (const category of categories) {
+      const brands = await productRepo
+        .createQueryBuilder('product')
+        .select('DISTINCT brand.brand_name', 'brand_name')
+        .leftJoin('product.brand', 'brand')
+        .where('product.category_id = :category_id', {
+          category_id: category.category_id,
+        })
+        .getRawMany();
+
+      const ramOptions = await productRepo
+        .createQueryBuilder('product')
+        .select("DISTINCT product.specification->>'RAM'", 'ram')
+        .where('product.category_id = :category_id', {
+          category_id: category.category_id,
+        })
+        .getRawMany();
+
+      let storageOptions: string[] = [];
+      if (category.name === 'laptopData') {
+        const ssdOptions = await productRepo
+          .createQueryBuilder('product')
+          .select(
+            "DISTINCT product.specification->>'SSDCapacity'",
+            'ssd_capacity'
+          )
+          .where('product.category_id = :category_id', {
+            category_id: category.category_id,
+          })
+          .getRawMany();
+
+        const hddOptions = await productRepo
+          .createQueryBuilder('product')
+          .select(
+            "DISTINCT product.specification->>'HDDCapacity'",
+            'hdd_capacity'
+          )
+          .where('product.category_id = :category_id', {
+            category_id: category.category_id,
+          })
+          .getRawMany();
+
+        storageOptions = [
+          ...ssdOptions.map(entry => entry.ssd_capacity),
+          ...hddOptions.map(entry => entry.hdd_capacity),
+        ].filter(option => option !== null);
+      } else {
+        storageOptions = (
+          await productRepo
+            .createQueryBuilder('product')
+            .select("DISTINCT product.specification->>'Storage'", 'storage')
+            .where('product.category_id = :category_id', {
+              category_id: category.category_id,
+            })
+            .getRawMany()
+        )
+          .map(entry => entry.storage)
+          .filter(option => option !== null);
+      }
+
+      filterOptions[category.name] = {
+        brand: brands.map(entry => entry.brand_name),
+        ram: ramOptions.map(entry => entry.ram),
+        storage: storageOptions,
+      };
+    }
+
+    return res.json({ filterOptions });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
