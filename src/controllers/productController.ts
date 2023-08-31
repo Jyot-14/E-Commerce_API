@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../database/data-source';
 import { Product } from '../database/entities/Product';
 import { paginate } from '../database/paginator';
+import { Category } from '../database/entities/Category';
 
 export const searchProduct = async (req: Request, res: Response) => {
   try {
@@ -15,6 +16,11 @@ export const searchProduct = async (req: Request, res: Response) => {
         searchTerm,
       });
     }
+
+    // Modify the query to include image URLs
+    queryBuilder = queryBuilder
+      .leftJoinAndSelect('product.images', 'product_image')
+      .addSelect(['product_image.image']);
 
     const { records: products, PaginationInfo } = await paginate(
       queryBuilder,
@@ -64,12 +70,31 @@ export const getProductsWithFilters = async (req: Request, res: Response) => {
       );
     }
 
+    // Modify the query to include image URLs
+    queryBuilder = queryBuilder
+      .leftJoinAndSelect('product.images', 'product_image')
+      .addSelect(['product_image.image']);
+
     const { records: products, PaginationInfo } = await paginate(
       queryBuilder,
       req
     );
 
     return res.json({ products, PaginationInfo });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// GET product's Categories
+export const getCategories = async (req: Request, res: Response) => {
+  const categoryRepo = AppDataSource.getRepository(Category);
+
+  try {
+    const categories = await categoryRepo.find();
+
+    return res.json({ categories });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
